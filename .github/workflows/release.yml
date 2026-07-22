@@ -50,6 +50,22 @@ jobs:
       - name: Build client release binary
         run: cargo build --release -p cliprelay-client
 
+      - name: Build NSIS installer
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}" -replace '^v',''
+          $exe = Get-ChildItem 'target/release/ClipRelay.exe' -File
+          $out = Join-Path (Get-Location).Path "ClipRelay_${ver}_x64-setup.exe"
+          choco install nsis -y --no-progress | Out-Null
+          & "C:\Program Files (x86)\NSIS\makensis.exe" "/DVER=$ver" "/DSRC=$($exe.FullName)" "/DOUT=$out" ".github\installer.nsi"
+          if ($LASTEXITCODE -ne 0) { throw "makensis failed" }
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cliprelay-installer
+          path: ClipRelay_*_x64-setup.exe
+
       - name: Upload client artifact
         uses: actions/upload-artifact@v4
         with:
@@ -75,3 +91,4 @@ jobs:
           files: |
             release-artifacts/cliprelay-relay-linux-x64/cliprelay-relay
             release-artifacts/cliprelay-client-windows-x64/ClipRelay.exe
+            release-artifacts/cliprelay-installer/ClipRelay_*_x64-setup.exe
